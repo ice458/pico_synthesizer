@@ -11,16 +11,6 @@ typedef int16_t fp_t; // Fixed-point type, 16-bit signed integer
 #define FP_MAX ((int16_t)32767)
 #define FP_MIN ((int16_t)-32768)
 
-typedef union
-{
-    uint32_t u32; // Access as a single 32-bit unsigned integer
-    struct
-    {
-        fp_t left;  // Left channel (16-bit)
-        fp_t right; // Right channel (16-bit)
-    } ch;
-} stereo_t;
-
 typedef int32_t q8_t;
 #define q8_to_int32_t(a) (a >> 8)
 #define int32_t_to_q8(a) (a << 8)

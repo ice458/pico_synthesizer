@@ -34,6 +34,16 @@
 #define MAX_REVERB_COMB_DELAY_SAMPLES 6000
 #define MAX_REVERB_ALLPASS_DELAY_SAMPLES 800
 
+typedef union
+{
+    uint32_t u32; // Access as a single 32-bit unsigned integer
+    struct
+    {
+        fp_t left;  // Left channel (16-bit)
+        fp_t right; // Right channel (16-bit)
+    } ch;
+} stereo_t;
+
 typedef struct
 {
     // Comb filters (parallel)
@@ -166,8 +176,8 @@ typedef struct
     uint8_t rpn_lsb;         // RPN LSB (CC 100)
     uint8_t data_msb;        // Data entry MSB (CC 6)
     uint8_t data_lsb;        // Data entry LSB (CC 38)
-    bool data_msb_received; // Flag to indicate if Data MSB has been received
-    bool data_lsb_received; // Flag to indicate if Data LSB has been received
+    bool data_msb_received;  // Flag to indicate if Data MSB has been received
+    bool data_lsb_received;  // Flag to indicate if Data LSB has been received
 } nrpn_rpn_state_t;
 
 // Channel state structure
