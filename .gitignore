@@ -1,3 +1,5 @@
 build
-drum/output_chunks
-drum/.mscbackup
+tools/drum/output_chunks
+tools/drum/.mscbackup
+tools/*.c
+tools/*.h
