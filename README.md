@@ -1,6 +1,7 @@
 # Pico Synthesizer
 
-A synthesizer project for the Raspberry Pi Pico 2.
+A synthesizer project for the Raspberry Pi Pico 2.  
+<img src="image/image.png" width="400">
 
 ## Description
 
