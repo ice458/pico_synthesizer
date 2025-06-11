@@ -1,0 +1,38 @@
+.program LSBJ16bit
+.side_set 2 opt
+.wrap_target
+    set x, 14     side 0b11
+
+Rch:
+    out pins, 1   side 0b00
+    jmp x--, Rch  side 0b10
+    out pins, 1   side 0b00
+    set x, 14     side 0b10
+
+Lch:
+    out pins, 1   side 0b01
+    jmp x--, Lch  side 0b11
+    out pins, 1   side 0b01
+.wrap
+
+
+% c-sdk {
+void LSBJ16bit_program_init(PIO pio, uint sm, uint offset, uint clkdiv, uint pin_base) {
+    pio_sm_config c = LSBJ16bit_program_get_default_config(offset);
+    sm_config_set_out_pins(&c, pin_base, 1);
+    sm_config_set_sideset_pins(&c, pin_base + 1);
+    sm_config_set_out_shift(&c, false, true, 32);
+   
+    uint pin_offset;
+    for (pin_offset = 0; pin_offset < 3; pin_offset++)
+    {
+        pio_gpio_init( pio, pin_base + pin_offset);
+    }
+    pio_sm_set_consecutive_pindirs(pio, sm, pin_base, 3, true);
+   
+   
+    sm_config_set_clkdiv(&c, clkdiv);
+    pio_sm_init(pio, sm, offset, &c);
+    pio_sm_set_enabled(pio, sm, true);
+}
+%}

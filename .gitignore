@@ -1,0 +1,4 @@
+build
+!*.uf2
+drum/output_chunks
+drum/.mscbackup
