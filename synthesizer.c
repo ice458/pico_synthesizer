@@ -960,16 +960,17 @@ void handle_rpn_nrpn(int8_t channel, bool is_nrpn, uint16_t parameter, uint16_t 
         {
         // RPN 0: pitch_bend_sensitivity
         case 0:
-            if (value <= 24)
+            if (v_MSB <= 24)
             { // max ±24 semitones
-                channel_state[channel].pitch_bend.sensitivity = value;
+                channel_state[channel].pitch_bend.sensitivity = v_MSB;
+                gpio_put(PICO_DEFAULT_LED_PIN, 1); // Indicate pitch bend sensitivity change
                 // Update all active voices on this channel
                 for (int i = 0; i < MAX_VOICE_NUM; i++)
                 {
                     if (voice_state[i].assigned_channel_num == channel && voice_state[i].env.state != IDLE)
                     {
                         voice_state[i].pb.factor = get_interpolated_pitch_bend_factor(
-                            value,
+                            v_MSB,
                             channel_state[channel].pitch_bend.range);
                     }
                 }
@@ -1015,7 +1016,14 @@ void handle_control_change(int8_t channel, uint8_t controller, uint8_t value)
 
     case 0x64: // RPN LSB (100)
         channel_state[channel].nrpn_rpn.rpn_lsb = value;
-        channel_state[channel].nrpn_rpn.param_type = PARAM_TYPE_RPN;
+        if (channel_state[channel].nrpn_rpn.rpn_msb == 127 && channel_state[channel].nrpn_rpn.rpn_lsb == 127)
+        {
+            channel_state[channel].nrpn_rpn.param_type = PARAM_TYPE_NONE;
+        }
+        else
+        {
+            channel_state[channel].nrpn_rpn.param_type = PARAM_TYPE_RPN;
+        }
         return;
 
     case 0x06: // data entry MSB (6)
