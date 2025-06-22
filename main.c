@@ -59,7 +59,7 @@ int main()
     PIO pio = pio0;
     uint offset = pio_add_program(pio, &LSBJ16bit_program);
     uint sm = 0;
-    uint clkdiv = 50;
+    uint clkdiv = 100;
     LSBJ16bit_program_init(pio, sm, offset, clkdiv, 0);
 
     // Repeating timer for audio processing

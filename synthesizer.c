@@ -379,10 +379,10 @@ void voice(voice_state_t *vs)
     vs->amplitude = (fp_t)((int32_t)(wave1) * (int32_t)(vs->tone.output_gain) >> 7);
 
     // // DC cut
-    fp_t signal_for_dc_cut = vs->amplitude;
-    vs->amplitude = fp_mul(HPF_ALPHA, (vs->dc_cut.prev_out + signal_for_dc_cut - vs->dc_cut.prev_in));
-    vs->dc_cut.prev_in = signal_for_dc_cut;
-    vs->dc_cut.prev_out = vs->amplitude;
+    // fp_t signal_for_dc_cut = vs->amplitude;
+    // vs->amplitude = fp_mul(HPF_ALPHA, (vs->dc_cut.prev_out + signal_for_dc_cut - vs->dc_cut.prev_in));
+    // vs->dc_cut.prev_in = signal_for_dc_cut;
+    // vs->dc_cut.prev_out = vs->amplitude;
 }
 
 void init_channel(int8_t ch_to_init)
