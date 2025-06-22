@@ -963,17 +963,8 @@ void handle_rpn_nrpn(int8_t channel, bool is_nrpn, uint16_t parameter, uint16_t 
             if (v_MSB <= 24)
             { // max ±24 semitones
                 channel_state[channel].pitch_bend.sensitivity = v_MSB;
-                gpio_put(PICO_DEFAULT_LED_PIN, 1); // Indicate pitch bend sensitivity change
-                // Update all active voices on this channel
-                for (int i = 0; i < MAX_VOICE_NUM; i++)
-                {
-                    if (voice_state[i].assigned_channel_num == channel && voice_state[i].env.state != IDLE)
-                    {
-                        voice_state[i].pb.factor = get_interpolated_pitch_bend_factor(
-                            v_MSB,
-                            channel_state[channel].pitch_bend.range);
-                    }
-                }
+                uint16_t current_bend_range = channel_state[channel].pitch_bend.range;
+                handle_pitch_bend(channel, current_bend_range & 0x7F, (current_bend_range >> 7) & 0x7F);
             }
             break;
 
@@ -993,6 +984,7 @@ void handle_rpn_nrpn(int8_t channel, bool is_nrpn, uint16_t parameter, uint16_t 
 
 void handle_control_change(int8_t channel, uint8_t controller, uint8_t value)
 {
+    // printf("CC received: Ch=%d, Controller=%d, Value=%d\n", channel, controller, value);
     if (channel < 0 || channel >= MAX_CHANNEL_NUM)
         return;
 
@@ -1029,31 +1021,34 @@ void handle_control_change(int8_t channel, uint8_t controller, uint8_t value)
     case 0x06: // data entry MSB (6)
         if (channel_state[channel].nrpn_rpn.param_type != PARAM_TYPE_NONE)
         {
-            // save MSB value
             channel_state[channel].nrpn_rpn.data_msb = value;
-            channel_state[channel].nrpn_rpn.data_msb_received = true;
+
+            // If MSB has been received, process the data
+            bool is_nrpn = (channel_state[channel].nrpn_rpn.param_type == PARAM_TYPE_NRPN);
+            uint16_t param_num;
+
+            if (is_nrpn)
+            {
+                param_num = (channel_state[channel].nrpn_rpn.nrpn_msb << 7) |
+                            channel_state[channel].nrpn_rpn.nrpn_lsb;
+            }
+            else
+            {
+                param_num = (channel_state[channel].nrpn_rpn.rpn_msb << 7) |
+                            channel_state[channel].nrpn_rpn.rpn_lsb;
+            }
 
             // If LSB has also been received, process the data
-            if (channel_state[channel].nrpn_rpn.data_lsb_received)
-            {
-                bool is_nrpn = (channel_state[channel].nrpn_rpn.param_type == PARAM_TYPE_NRPN);
-                uint16_t param_num;
-                if (is_nrpn)
-                {
-                    param_num = (channel_state[channel].nrpn_rpn.nrpn_msb << 7) |
-                                channel_state[channel].nrpn_rpn.nrpn_lsb;
-                }
-                else
-                {
-                    param_num = (channel_state[channel].nrpn_rpn.rpn_msb << 7) |
-                                channel_state[channel].nrpn_rpn.rpn_lsb;
-                }
-                uint16_t data_value = (channel_state[channel].nrpn_rpn.data_msb << 7) | channel_state[channel].nrpn_rpn.data_lsb;
-                handle_rpn_nrpn(channel, is_nrpn, param_num, data_value);
-                // Reset flags
-                channel_state[channel].nrpn_rpn.data_msb_received = false;
-                channel_state[channel].nrpn_rpn.data_lsb_received = false;
-            }
+            uint8_t data_lsb_value = channel_state[channel].nrpn_rpn.data_lsb_received
+                                         ? channel_state[channel].nrpn_rpn.data_lsb
+                                         : 0;
+
+            uint16_t data_value = (channel_state[channel].nrpn_rpn.data_msb << 7) | data_lsb_value;
+
+            handle_rpn_nrpn(channel, is_nrpn, param_num, data_value);
+
+            channel_state[channel].nrpn_rpn.data_msb_received = false;
+            channel_state[channel].nrpn_rpn.data_lsb_received = false;
         }
         return;
 
