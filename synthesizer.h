@@ -12,7 +12,7 @@
 #include "midi.h"
 #include "pitch_bend_table_interpolated.h"
 #include "vibrato_table.h"
-#include "pcm_table.h"
+#include "adpcm_table.h"
 
 #define FS (40e3f)
 #define TABLE_LENGTH_q8 (TABLE_LENGTH << 8)
@@ -26,7 +26,7 @@
 #define HPF_RC (1.0f / (2.0f * M_PI * HPF_CUTOFF_FREQ))
 #define HPF_ALPHA (float_to_fp(HPF_RC / (HPF_RC + (1.0f / FS))))
 
-#define PCM_INITIAL_SILENCE_SAMPLES 10
+#define ADPCM_INITIAL_SILENCE_SAMPLES 10
 
 // Reverb Parameters
 #define REVERB_COMB_FILTER_COUNT 2
@@ -155,8 +155,11 @@ typedef struct
         fp_t prev_in;  // Previous input value for DC cut
     } dc_cut;          // DC cut parameters
 
-    fp_t amplitude;                     // Current amplitude of the voice
-    uint32_t pcm_initial_delay_counter; // PCM initial delay counter
+    fp_t amplitude;                       // Current amplitude of the voice
+    uint32_t adpcm_initial_delay_counter; // ADPCM initial delay counter
+    adpcm_state_t adpcm_decoder_state;    // ADPCM decoder state
+    uint32_t adpcm_byte_position;         // Current byte position in ADPCM data
+    bool adpcm_nibble_high;               // Flag for high/low nibble processing
 } voice_state_t;
 
 typedef enum

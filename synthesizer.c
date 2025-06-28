@@ -179,11 +179,17 @@ void set_voice_state(voice_state_t *vs, tone_t *tone, int8_t ch, int8_t note, in
     }
     else
     {
-        // Initialize PCM oscillator
+        // Initialize ADPCM oscillator
         vs->osc1.increment = 1;
         vs->osc1.read_pointer = 0;
-        vs->env.state = ATTACK;                                      // Less likely to be deprived of voice duaring PCM playback
-        vs->pcm_initial_delay_counter = PCM_INITIAL_SILENCE_SAMPLES; // To make sure PCM playback starts after a delay
+        vs->env.state = ATTACK;                                          // Less likely to be deprived of voice during ADPCM playback
+        vs->adpcm_initial_delay_counter = ADPCM_INITIAL_SILENCE_SAMPLES; // To make sure ADPCM playback starts after a delay
+
+        // Initialize ADPCM decoder state
+        vs->adpcm_decoder_state.predictor = 0;
+        vs->adpcm_decoder_state.step_index = 0;
+        vs->adpcm_byte_position = 0;
+        vs->adpcm_nibble_high = true; // Start with high nibble
     }
 
     // Initialize DC cut filter
@@ -334,24 +340,43 @@ void voice(voice_state_t *vs)
     }
     else
     {
-        // PCM oscillator
-        if (vs->pcm_initial_delay_counter > 0)
+        // ADPCM oscillator
+        if (vs->adpcm_initial_delay_counter > 0)
         {
             wave1 = 0; // output silence during initial delay
-            vs->pcm_initial_delay_counter--;
+            vs->adpcm_initial_delay_counter--;
         }
         else
         {
-            if ((PCM_START_NOTE <= vs->note) && (vs->note <= PCM_END_NOTE))
+            if ((ADPCM_START_NOTE <= vs->note) && (vs->note <= ADPCM_END_NOTE))
             {
-                int32_t pcm_note_offset = vs->note - PCM_START_NOTE; // Calculate PCM note offset
-                const pcm_sample_t *sample = &pcm_samples[pcm_note_offset];
+                int32_t adpcm_note_offset = vs->note - ADPCM_START_NOTE; // Calculate ADPCM note offset
+                const adpcm_sample_t *sample = &adpcm_samples[adpcm_note_offset];
 
-                if (sample->data != NULL && sample->length > 0 && vs->osc1.read_pointer < sample->length)
+                if (sample->data != NULL && sample->length > 0 && vs->adpcm_byte_position < sample->length)
                 {
-                    wave1 = sample->data[vs->osc1.read_pointer];
-                    vs->osc1.read_pointer++;
-                    if (vs->osc1.read_pointer >= sample->length)
+                    // Get current byte
+                    uint8_t current_byte = sample->data[vs->adpcm_byte_position];
+                    uint8_t nibble;
+
+                    // Extract nibble (high or low)
+                    if (vs->adpcm_nibble_high)
+                    {
+                        nibble = (current_byte >> 4) & 0x0F; // High nibble
+                        vs->adpcm_nibble_high = false;       // Next time use low nibble
+                    }
+                    else
+                    {
+                        nibble = current_byte & 0x0F; // Low nibble
+                        vs->adpcm_nibble_high = true; // Next byte, start with high nibble
+                        vs->adpcm_byte_position++;    // Move to next byte
+                    }
+
+                    // Decode ADPCM sample
+                    wave1 = adpcm_decode_sample(nibble, &vs->adpcm_decoder_state);
+
+                    // Check if we've reached the end
+                    if (vs->adpcm_byte_position >= sample->length && !vs->adpcm_nibble_high)
                     {
                         vs->env.state = IDLE;
                     }
@@ -360,14 +385,16 @@ void voice(voice_state_t *vs)
                 {
                     wave1 = 0;
                     vs->env.state = IDLE;
-                    vs->osc1.read_pointer = 0;
+                    vs->adpcm_byte_position = 0;
+                    vs->adpcm_nibble_high = true;
                 }
             }
             else
             {
                 vs->env.state = IDLE;
                 wave1 = 0;
-                vs->osc1.read_pointer = 0;
+                vs->adpcm_byte_position = 0;
+                vs->adpcm_nibble_high = true;
             }
         }
     }

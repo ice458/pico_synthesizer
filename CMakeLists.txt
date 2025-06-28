@@ -41,7 +41,7 @@ add_executable(pico_synthesizer
         midi.c
         usb_descriptors.c
         tone.c
-        pcm_table.c
+        adpcm_table.c
         pan_table.c
         )
 
