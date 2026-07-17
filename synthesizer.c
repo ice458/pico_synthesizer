@@ -987,9 +987,13 @@ void handle_rpn_nrpn(int8_t channel, bool is_nrpn, uint16_t parameter, uint16_t 
         {
         // RPN 0: pitch_bend_sensitivity
         case 0:
-            if (v_MSB <= 24)
-            { // max ±24 semitones
-                channel_state[channel].pitch_bend.sensitivity = v_MSB;
+            {
+                int8_t sensitivity = v_MSB;
+                if (sensitivity > 24)
+                {
+                    sensitivity = 24; // Clamp to max supported ±24 semitones
+                }
+                channel_state[channel].pitch_bend.sensitivity = sensitivity;
                 uint16_t current_bend_range = channel_state[channel].pitch_bend.range;
                 handle_pitch_bend(channel, current_bend_range & 0x7F, (current_bend_range >> 7) & 0x7F);
             }
@@ -1049,6 +1053,7 @@ void handle_control_change(int8_t channel, uint8_t controller, uint8_t value)
         if (channel_state[channel].nrpn_rpn.param_type != PARAM_TYPE_NONE)
         {
             channel_state[channel].nrpn_rpn.data_msb = value;
+            channel_state[channel].nrpn_rpn.data_msb_received = true;
 
             // If MSB has been received, process the data
             bool is_nrpn = (channel_state[channel].nrpn_rpn.param_type == PARAM_TYPE_NRPN);
@@ -1073,9 +1078,6 @@ void handle_control_change(int8_t channel, uint8_t controller, uint8_t value)
             uint16_t data_value = (channel_state[channel].nrpn_rpn.data_msb << 7) | data_lsb_value;
 
             handle_rpn_nrpn(channel, is_nrpn, param_num, data_value);
-
-            channel_state[channel].nrpn_rpn.data_msb_received = false;
-            channel_state[channel].nrpn_rpn.data_lsb_received = false;
         }
         return;
 
